@@ -1,0 +1,748 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html>
+<head>
+    <meta name='viewport' content='width=device-width, initial-scale=1'/>
+    <title>Level Editor</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #create-level-menu, #background-selection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: url('https://i.postimg.cc/QMTT2Ctt/2024085220451.jpg') no-repeat center center;
+            background-size: cover;
+            position: relative;
+        }
+        .menu-title {
+            font-size: 48px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .menu-option, .background-option {
+            display: flex;
+            align-items: center;
+            margin: 10px;
+        }
+        .background-preview {
+            width: 100px;
+            height: 60px;
+            margin-right: 10px;
+            border: 2px solid white;
+            border-radius: 5px;
+        }
+        .menu-option button, .background-option button, #copy-code-btn, #back-to-menu-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .menu-option button:hover, .background-option button:hover, #copy-code-btn:hover, #back-to-menu-btn:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+        .menu-option input {
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+        #gameCanvas {
+            border: 1px solid black;
+            display: none;
+        }
+        #menu {
+            margin-top: 10px;
+            display: none;
+            flex-direction: row;
+            gap: 10px;
+            padding: 5px;
+            width: 100%;
+            box-sizing: border-box;
+            background-color: rgba(255, 255, 0, 0.8);
+            align-items: center;
+        }
+        .menu-item {
+            cursor: pointer;
+            border: 2px solid rgba(0, 0, 0, 0.7);
+            display: inline-block;
+        }
+        .menu-item:hover {
+            border: 2px solid #00f;
+        }
+        .menu-item.selected {
+            border: 2px solid #f00;
+        }
+        #game-container {
+            display: none;
+            position: relative;
+            border: 1px solid black;
+        }
+        .button {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+            line-height: 60px;
+            font-size: 20px;
+            border-radius: 10px;
+            user-select: none;
+            touch-action: none;
+        }
+        #leftButton { bottom: 20px; left: 20px; }
+        #rightButton { bottom: 20px; left: 100px; }
+        #jumpButton { bottom: 20px; right: 20px; }
+        #game-over, #win-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #game-over button, #win-screen button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="create-level-menu">
+        <h1 class="menu-title">Создать уровень</h1>
+        <div class="menu-option">
+            <button id="create-level-btn">Создать новый уровень</button>
+        </div>
+        <div class="menu-option">
+            <input type="text" id="level-code-input" placeholder="Введите код уровня">
+            <button id="load-level-btn">Далее</button>
+        </div>
+        <div class="menu-option">
+            <button id="back-to-main-menu-btn">Назад</button>
+        </div>
+    </div>
+    <div id="background-selection" style="display: none;">
+        <h1 class="menu-title">Выбор фона</h1>
+        <div class="background-option">
+            <img src="https://i.postimg.cc/C16Gt6tN/130-20250322154451.png" class="background-preview">
+            <button data-bg="background1">Фон 1</button>
+        </div>
+        <div class="background-option">
+            <img src="https://i.postimg.cc/BbHLqqNm/130-20250322155052.png" class="background-preview">
+            <button data-bg="background2">Фон 2</button>
+        </div>
+        <div class="background-option">
+            <img src="https://i.postimg.cc/8z1JSgvb/130-20250322155201.png" class="background-preview">
+            <button data-bg="background3">Фон 3</button>
+        </div>
+        <div class="background-option">
+            <img src="https://i.postimg.cc/zG0LD2SY/130-20250322155359.png" class="background-preview">
+            <button data-bg="background4">Фон 4</button>
+        </div>
+    </div>
+    <canvas id="gameCanvas" width="3000" height="600"></canvas>
+    <div id="menu">
+        <img class="menu-item" data-type="platform" src="https://i.postimg.cc/rwnrR3gC/ce80c5c3db6e9b7.png" width="80" height="26">
+        <img class="menu-item" data-type="deadly1" src="https://i.postimg.cc/kG31cMCk/20250323-141207.png" width="80" height="26">
+        <img class="menu-item" data-type="deadly2" src="https://i.postimg.cc/VsnHNtB1/20250323-141244.png" width="80" height="26">
+        <img class="menu-item" data-type="spike" src="https://i.postimg.cc/QMgZyGPc/2daea9f37ca2c48.png" width="26" height="26">
+        <img class="menu-item" data-type="finish" src="https://i.postimg.cc/YSLhG9vM/542c5a903add587.png" width="26" height="52">
+        <img class="menu-item" data-type="start" src="https://i.postimg.cc/jdc3cccf/20250321-114920.png" width="40" height="40">
+        <img class="menu-item" data-type="coin" src="https://i.postimg.cc/MTqJVR0C/132-20250323121142.png" width="40" height="40">
+        <button id="copy-code-btn">Скопировать код</button>
+        <button id="back-to-menu-btn">Вернуться в меню</button>
+    </div>
+    <div id="game-container">
+        <div id="game"></div>
+        <div id="leftButton" class="button">←</div>
+        <div id="rightButton" class="button">→</div>
+        <div id="jumpButton" class="button">↑</div>
+        <div id="game-over">
+            <h1>Game Over</h1>
+            <button id="restart-btn">Начать заново</button>
+        </div>
+        <div id="win-screen">
+            <h1>You Win!</h1>
+            <p id="time-display"></p>
+            <p id="coins-display"></p>
+            <button id="return-to-menu-btn">Вернуться в меню</button>
+        </div>
+    </div>
+
+    <script>
+        // Объявляем переменные
+        let objects = [];
+        let selectedType = null;
+        let textures = {};
+        let backgrounds = {};
+        let selectedBackground = null;
+        let editorMusic = null;
+        let imagesLoaded = 0;
+        const totalImages = 11; // 7 текстур + 4 фона
+        let game = null; // Для Phaser
+        let currentMode = 'menu'; // 'menu', 'editor', 'game'
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const backgroundSelection = document.getElementById('background-selection');
+        const createLevelMenu = document.getElementById('create-level-menu');
+        const levelCodeInput = document.getElementById('level-code-input');
+        const createLevelBtn = document.getElementById('create-level-btn');
+        const loadLevelBtn = document.getElementById('load-level-btn');
+        const copyCodeBtn = document.getElementById('copy-code-btn');
+        const backToMenuBtn = document.getElementById('back-to-menu-btn');
+        const gameContainer = document.getElementById('game-container');
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            // Назначаем обработчики событий
+            createLevelBtn.addEventListener('click', goToBackgroundSelection);
+            loadLevelBtn.addEventListener('click', loadLevelFromInput);
+            copyCodeBtn.addEventListener('click', copyLevelCode);
+            backToMenuBtn.addEventListener('click', backToCreateLevelMenu);
+            // Добавляем обработчик для кнопки "Назад"
+            document.getElementById('back-to-main-menu-btn').addEventListener('click', () => {
+                window.location.href = 'https://ahahachahahahahahaah.github.io/game/index.html';
+            });
+            
+            // Назначаем обработчики для выбора фона
+            document.querySelectorAll('#background-selection button[data-bg]').forEach(btn => {
+                btn.addEventListener('click', () => selectBackground(btn.dataset.bg));
+            });
+
+            // Загружаем ресурсы
+            loadResources();
+        });
+
+        function goToBackgroundSelection() {
+            currentMode = 'editor';
+            createLevelMenu.style.display = 'none';
+            backgroundSelection.style.display = 'flex';
+            // Музыка уже играет, так как она запускается в loadMusic
+        }
+
+        function backToCreateLevelMenu() {
+            // Сбрасываем состояние редактора
+            objects = [];
+            selectedBackground = null;
+            selectedType = null;
+            if (editorMusic) editorMusic.pause();
+            
+            // Показываем меню "Создать уровень"
+            canvas.style.display = 'none';
+            menu.style.display = 'none';
+            backgroundSelection.style.display = 'none';
+            createLevelMenu.style.display = 'flex';
+            gameContainer.style.display = 'none';
+            currentMode = 'menu';
+
+            // Возобновляем музыку редактора
+            if (editorMusic) editorMusic.play();
+        }
+
+        function loadLevelFromInput() {
+            const levelCode = levelCodeInput.value.trim();
+            if (levelCode) {
+                loadLevelFromCode(levelCode);
+            } else {
+                alert('Пожалуйста, введите код уровня!');
+            }
+        }
+
+        function selectBackground(bg) {
+            selectedBackground = bg;
+            backgroundSelection.style.display = 'none';
+            canvas.style.display = 'block';
+            menu.style.display = 'flex';
+            // Музыка уже играет, так как она запускается в loadMusic
+            draw();
+        }
+
+        function copyLevelCode() {
+            const levelCode = generateLevelCode();
+            if (!levelCode) {
+                alert('Сначала выберите фон и добавьте объекты!');
+                return;
+            }
+
+            // Проверяем поддержку Clipboard API
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(levelCode).then(() => {
+                    alert('Код уровня скопирован в буфер обмена!');
+                }).catch(err => {
+                    console.error('Ошибка копирования: ', err);
+                    fallbackCopyToClipboard(levelCode);
+                });
+            } else {
+                // Используем fallback-метод, если Clipboard API не доступен
+                fallbackCopyToClipboard(levelCode);
+            }
+        }
+
+        // Fallback-метод для копирования в буфер обмена
+        function fallbackCopyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed'; // Чтобы не было прокрутки страницы
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    alert('Код уровня скопирован в буфер обмена!\n' + text);
+                } else {
+                    alert('Не удалось скопировать код. Скопируйте вручную:\n' + text);
+                }
+            } catch (err) {
+                console.error('Ошибка копирования: ', err);
+                alert('Не удалось скопировать код. Скопируйте вручную:\n' + text);
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+
+        function loadResources() {
+            // Загружаем текстуры
+            loadTexture('platform', 'https://i.postimg.cc/rwnrR3gC/ce80c5c3db6e9b7.png', 150, 50);
+            loadTexture('deadly1', 'https://i.postimg.cc/kG31cMCk/20250323-141207.png', 150, 50);
+            loadTexture('deadly2', 'https://i.postimg.cc/VsnHNtB1/20250323-141244.png', 150, 50);
+            loadTexture('spike', 'https://i.postimg.cc/QMgZyGPc/2daea9f37ca2c48.png', 50, 50);
+            loadTexture('finish', 'https://i.postimg.cc/YSLhG9vM/542c5a903add587.png', 50, 100);
+            loadTexture('start', 'https://i.postimg.cc/jdc3cccf/20250321-114920.png', 50, 50);
+            loadTexture('coin', 'https://i.postimg.cc/MTqJVR0C/132-20250323121142.png', 25, 25);
+
+            // Загружаем фоны
+            loadBackground('background1', 'https://i.postimg.cc/C16Gt6tN/130-20250322154451.png');
+            loadBackground('background2', 'https://i.postimg.cc/BbHLqqNm/130-20250322155052.png');
+            loadBackground('background3', 'https://i.postimg.cc/8z1JSgvb/130-20250322155201.png');
+            loadBackground('background4', 'https://i.postimg.cc/zG0LD2SY/130-20250322155359.png');
+
+            // Загружаем музыку
+            loadMusic();
+        }
+
+        function loadTexture(name, src, width, height) {
+            const img = new Image();
+            img.onload = () => {
+                imagesLoaded++;
+                textures[name] = { img, width, height };
+                if (imagesLoaded === totalImages) {
+                    draw();
+                }
+            };
+            img.onerror = () => console.error(`Ошибка загрузки текстуры: ${src}`);
+            img.src = src;
+        }
+
+        function loadBackground(name, src) {
+            const img = new Image();
+            img.onload = () => {
+                imagesLoaded++;
+                backgrounds[name] = img;
+                if (imagesLoaded === totalImages) {
+                    draw();
+                }
+            };
+            img.onerror = () => console.error(`Ошибка загрузки фона: ${src}`);
+            img.src = src;
+        }
+
+        function loadMusic() {
+            editorMusic = new Audio('https://ahahachahahahahahaah.github.io/game/editor.mp3');
+            editorMusic.loop = true;
+            editorMusic.volume = 0.5;
+            editorMusic.onerror = () => console.error('Ошибка загрузки музыки');
+            // Запускаем музыку сразу после загрузки
+            editorMusic.oncanplaythrough = () => {
+                editorMusic.play().catch(err => {
+                    console.error('Ошибка воспроизведения музыки редактора:', err);
+                });
+            };
+        }
+
+        function loadLevelFromCode(levelCode) {
+            try {
+                const parts = levelCode.split('|');
+                const background = parts[0];
+                const levelObjects = parts.slice(1).map(obj => {
+                    const [type, x, y] = obj.split(',');
+                    return { type, x: parseInt(x), y: parseInt(y) };
+                });
+
+                const hasStart = levelObjects.some(obj => obj.type === 'start');
+                const hasFinish = levelObjects.some(obj => obj.type === 'finish');
+                if (!hasStart || !hasFinish) {
+                    alert('Код уровня некорректен: должен содержать старт и финиш!');
+                    return;
+                }
+
+                const startX = levelObjects.find(obj => obj.type === 'start')?.x || 400;
+                const startY = levelObjects.find(obj => obj.type === 'start')?.y || 450;
+
+                // Переключаемся в режим игры
+                currentMode = 'game';
+                createLevelMenu.style.display = 'none';
+                backgroundSelection.style.display = 'none';
+                canvas.style.display = 'none';
+                menu.style.display = 'none';
+                gameContainer.style.display = 'block';
+
+                // Запускаем игру
+                startGame(background, levelObjects, startX, startY);
+            } catch (e) {
+                console.error('Ошибка загрузки уровня:', e);
+                alert('Неверный формат кода уровня! Ошибка: ' + e.message);
+            }
+        }
+
+        function startGame(background, levelObjects, startX, startY) {
+            if (game) {
+                game.destroy(true);
+            }
+
+            let jumpCount = 0;
+            const maxJumps = 2;
+            let isJumping = false;
+            let startTime;
+            let elapsedTime;
+            let collectedCoins = 0;
+            let backgroundMusic = null;
+            let gameOverSound = null;
+            let winSound = null;
+            let jumpSound = null;
+            let coinSound = null;
+            let musicVolume = 0.5;
+            let sfxVolume = 0.5;
+            let selectedSkin = 'pineapple1';
+            let isTouchingLeft = false;
+            let isTouchingRight = false;
+            let isTouchingJump = false;
+
+            const config = {
+                type: Phaser.AUTO,
+                width: 800,
+                height: 600,
+                parent: 'game',
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        gravity: { y: 300 },
+                        debug: false
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                },
+                scale: {
+                    mode: Phaser.Scale.FIT,
+                    autoCenter: Phaser.Scale.CENTER_BOTH
+                },
+                render: {
+                    willReadFrequently: true
+                }
+            };
+
+            game = new Phaser.Game(config);
+
+            function preload() {
+                this.load.image('pineapple1', 'https://i.postimg.cc/jdc3cccf/20250321-114920.png');
+                this.load.image('pineapple2', 'https://i.postimg.cc/QNkWjt7y/Clipped-image-20250305-181458.png');
+                this.load.image('pineapple3', 'https://i.postimg.cc/3JFjf19W/Clipped-image-20250321-121502.png');
+                this.load.image('pineapple4', 'https://i.postimg.cc/WpM0t8BS/Clipped-image-20250323-113913.png');
+                this.load.image('background1', 'https://i.postimg.cc/C16Gt6tN/130-20250322154451.png');
+                this.load.image('background2', 'https://i.postimg.cc/BbHLqqNm/130-20250322155052.png');
+                this.load.image('background3', 'https://i.postimg.cc/8z1JSgvb/130-20250322155201.png');
+                this.load.image('background4', 'https://i.postimg.cc/zG0LD2SY/130-20250322155359.png');
+                this.load.image('platform', 'https://i.postimg.cc/rwnrR3gC/ce80c5c3db6e9b7.png');
+                this.load.image('deadlyPlatform1', 'https://i.postimg.cc/kG31cMCk/20250323-141207.png');
+                this.load.image('deadlyPlatform2', 'https://i.postimg.cc/VsnHNtB1/20250323-141244.png');
+                this.load.image('spike', 'https://i.postimg.cc/QMgZyGPc/2daea9f37ca2c48.png');
+                this.load.image('finish', 'https://i.postimg.cc/YSLhG9vM/542c5a903add587.png');
+                this.load.image('coin', 'https://i.postimg.cc/MTqJVR0C/132-20250323121142.png');
+                this.load.audio('gameOver', 'https://ahahachahahahahahaah.github.io/game/game_over.mp3');
+                this.load.audio('win', 'https://ahahachahahahahahaah.github.io/game/win.mp3');
+                this.load.audio('levelMusic', 'https://ahahachahahahahahaah.github.io/game/level.mp3');
+                this.load.audio('jumpSound', 'https://ahahachahahahahahaah.github.io/game/jump.mp3');
+                this.load.audio('coinSound', 'https://ahahachahahahahahaah.github.io/game/coin.mp3');
+
+                this.load.on('filecomplete', (key) => {
+                    console.log(`Файл загружен: ${key}`);
+                });
+                this.load.on('loaderror', (file) => {
+                    console.error(`Ошибка загрузки файла: ${file.key}`);
+                    alert('Ошибка загрузки ресурса: ' + file.key);
+                    backToCreateLevelMenu();
+                });
+            }
+
+            function checkCoinOverlap(player, coins) {
+                const playerBounds = player.getBounds();
+                coins.getChildren().forEach(coin => {
+                    if (!coin.active) return;
+                    const coinBounds = coin.getBounds();
+                    if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, coinBounds)) {
+                        coin.setActive(false).setVisible(false);
+                        collectedCoins++;
+                        if (coinSound) coinSound.play();
+                        console.log(`Монета собрана! Всего монет: ${collectedCoins}`);
+                    }
+                });
+            }
+
+            function create() {
+                collectedCoins = 0;
+                this.physics.world.setBounds(0, 0, 3000, 600);
+
+                let backgroundImage = this.add.image(0, 0, background).setOrigin(0, 0);
+                backgroundImage.displayWidth = 3000;
+                backgroundImage.displayHeight = 600;
+                backgroundImage.setDepth(0);
+
+                this.platforms = this.physics.add.staticGroup();
+                this.deadlyPlatforms1 = this.physics.add.staticGroup();
+                this.deadlyPlatforms2 = this.physics.add.staticGroup();
+                this.spikes = this.physics.add.staticGroup();
+                this.coins = this.add.group();
+                this.finish = null;
+                this.player = null;
+
+                levelObjects.forEach(obj => {
+                    if (obj.type === 'platform') {
+                        this.platforms.create(obj.x, obj.y, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                    } else if (obj.type === 'deadly1') {
+                        this.deadlyPlatforms1.create(obj.x, obj.y, 'deadlyPlatform1').setScale(0.5).refreshBody().setDepth(2);
+                    } else if (obj.type === 'deadly2') {
+                        this.deadlyPlatforms2.create(obj.x, obj.y, 'deadlyPlatform2').setScale(0.5).refreshBody().setDepth(2);
+                    } else if (obj.type === 'spike') {
+                        this.spikes.create(obj.x, obj.y, 'spike').setScale(0.2).refreshBody().setDepth(2);
+                    } else if (obj.type === 'finish') {
+                        this.finish = this.physics.add.staticSprite(obj.x, obj.y, 'finish').setScale(0.2).refreshBody().setDepth(2);
+                    } else if (obj.type === 'coin') {
+                        this.coins.create(obj.x, obj.y, 'coin').setScale(0.1).setDepth(2);
+                    }
+                });
+
+                this.player = this.physics.add.sprite(startX, startY, selectedSkin);
+                this.player.setScale(0.1);
+                this.player.setBounce(0.2);
+                this.player.setCollideWorldBounds(true);
+                this.player.body.setSize(this.player.width * 0.8, this.player.height * 0.8);
+                this.player.setDepth(3);
+
+                this.cameras.main.setBounds(0, 0, 3000, 600);
+                this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
+                this.physics.add.collider(this.player, this.platforms, () => {
+                    jumpCount = 0;
+                    console.log("Коснулся платформы, jumpCount сброшен:", jumpCount);
+                });
+                this.physics.add.overlap(this.player, this.spikes, gameOver, null, this);
+                this.physics.add.overlap(this.player, this.deadlyPlatforms1, gameOver, null, this);
+                this.physics.add.overlap(this.player, this.deadlyPlatforms2, gameOver, null, this);
+                this.physics.add.overlap(this.player, this.finish, winLevel, null, this);
+
+                jumpCount = 0;
+                startTime = this.time.now;
+
+                // Инициализация звуков
+                gameOverSound = this.sound.add('gameOver', { volume: sfxVolume });
+                winSound = this.sound.add('win', { volume: sfxVolume });
+                jumpSound = this.sound.add('jumpSound', { volume: sfxVolume });
+                coinSound = this.sound.add('coinSound', { volume: sfxVolume });
+                backgroundMusic = this.sound.add('levelMusic', { loop: true, volume: musicVolume });
+
+                if (editorMusic && editorMusic.playing) editorMusic.pause();
+
+                if (backgroundMusic && !backgroundMusic.isPlaying) {
+                    backgroundMusic.play();
+                }
+
+                setupTouchControls(this);
+            }
+
+            function update() {
+                const cursors = this.input.keyboard.createCursorKeys();
+
+                if (cursors.left.isDown || isTouchingLeft) {
+                    this.player.setVelocityX(-160);
+                } else if (cursors.right.isDown || isTouchingRight) {
+                    this.player.setVelocityX(160);
+                } else {
+                    this.player.setVelocityX(0);
+                }
+
+                if ((cursors.up.isDown || isTouchingJump) && !isJumping && jumpCount < maxJumps) {
+                    this.player.setVelocityY(-330);
+                    jumpCount++;
+                    isJumping = true;
+                    if (jumpSound) jumpSound.play();
+                    console.log("Прыжок! jumpCount:", jumpCount);
+                }
+
+                if (!cursors.up.isDown && !isTouchingJump) {
+                    isJumping = false;
+                }
+
+                checkCoinOverlap(this.player, this.coins);
+            }
+
+            function gameOver(player, hazard) {
+                this.physics.pause();
+                if (backgroundMusic && backgroundMusic.isPlaying) backgroundMusic.stop();
+                if (gameOverSound) gameOverSound.play();
+                document.getElementById('game-over').style.display = 'flex';
+            }
+
+            function winLevel(player, finish) {
+                this.physics.pause();
+                if (backgroundMusic && backgroundMusic.isPlaying) backgroundMusic.stop();
+                if (winSound) winSound.play();
+                elapsedTime = (this.time.now - startTime) / 1000;
+                document.getElementById('time-display').innerText = `Время: ${elapsedTime.toFixed(2)} сек`;
+                document.getElementById('coins-display').innerText = `Собрано монет: ${collectedCoins}`;
+                document.getElementById('win-screen').style.display = 'flex';
+            }
+
+            function setupTouchControls(scene) {
+                const leftButton = document.getElementById('leftButton');
+                const rightButton = document.getElementById('rightButton');
+                const jumpButton = document.getElementById('jumpButton');
+
+                leftButton.addEventListener('touchstart', () => {
+                    isTouchingLeft = true;
+                });
+                leftButton.addEventListener('touchend', () => {
+                    isTouchingLeft = false;
+                });
+
+                rightButton.addEventListener('touchstart', () => {
+                    isTouchingRight = true;
+                });
+                rightButton.addEventListener('touchend', () => {
+                    isTouchingRight = false;
+                });
+
+                jumpButton.addEventListener('touchstart', () => {
+                    isTouchingJump = true;
+                });
+                jumpButton.addEventListener('touchend', () => {
+                    isTouchingJump = false;
+                });
+
+                document.getElementById('restart-btn').addEventListener('click', () => {
+                    document.getElementById('game-over').style.display = 'none';
+                    scene.scene.restart();
+                    if (backgroundMusic && !backgroundMusic.isPlaying) {
+                        backgroundMusic.play();
+                    }
+                });
+
+                document.getElementById('return-to-menu-btn').addEventListener('click', () => {
+                    document.getElementById('win-screen').style.display = 'none';
+                    backToCreateLevelMenu();
+                });
+            }
+        }
+
+        // Обработчики событий для меню редактора
+        menu.addEventListener('click', (e) => {
+            const item = e.target.closest('.menu-item');
+            if (!item) return;
+
+            document.querySelectorAll('.menu-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            item.classList.add('selected');
+            selectedType = item.dataset.type;
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (!selectedType || imagesLoaded < totalImages) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const texture = textures[selectedType];
+
+            if (selectedType === 'finish' || selectedType === 'start') {
+                objects = objects.filter(obj => obj.type !== selectedType);
+            }
+
+            objects.push({
+                type: selectedType,
+                x: x,
+                y: y,
+                width: texture.width,
+                height: texture.height
+            });
+
+            draw();
+        });
+
+        function generateLevelCode() {
+            if (!selectedBackground) return '';
+            const levelData = [selectedBackground];
+            objects.forEach(obj => {
+                levelData.push(`${obj.type},${Math.round(obj.x)},${Math.round(obj.y)}`);
+            });
+            return levelData.join('|');
+        }
+
+        function draw() {
+            if (!selectedBackground) return;
+
+            if (imagesLoaded < totalImages) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px Arial';
+                ctx.fillText('Загрузка текстур...', 10, 20);
+                return;
+            }
+
+            const bg = backgrounds[selectedBackground];
+            ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+            objects.forEach(obj => {
+                const texture = textures[obj.type];
+                if (texture) {
+                    ctx.drawImage(texture.img, obj.x, obj.y, obj.width, obj.height);
+                }
+            });
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'925d6ba58fa14576',t:'MTc0Mjg5NTM1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

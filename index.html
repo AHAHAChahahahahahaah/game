@@ -1,0 +1,839 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ананас: Прыжки</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #87CEEB;
+            overflow: hidden;
+        }
+        #game-container {
+            border: 1px solid black;
+            position: relative;
+        }
+        .button {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            text-align: center;
+            line-height: 60px;
+            font-size: 20px;
+            border-radius: 10px;
+            user-select: none;
+            touch-action: none;
+        }
+        #leftButton { bottom: 20px; left: 20px; }
+        #rightButton { bottom: 20px; left: 100px; }
+        #jumpButton { bottom: 20px; right: 20px; }
+        #menu, #settings-menu, #about-menu, #skin-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.postimg.cc/Rq52Jzfs/2024081220731.jpg') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #settings-menu, #about-menu {
+            background: url('https://i.postimg.cc/hG3sLp6n/2024085220039.jpg') no-repeat center center;
+            background-size: cover;
+        }
+        #skin-menu {
+            background: url('https://i.postimg.cc/HnsMqD6x/2024085124240.jpg') no-repeat center center;
+            background-size: cover;
+        }
+        #settings-menu, #about-menu, #skin-menu {
+            display: none;
+        }
+        #menu h1 {
+            color: black;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+        }
+        #settings-menu h1, #about-menu h1, #skin-menu h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        #menu button, #settings-menu button, #about-menu button, #skin-menu button {
+            pointer-events: auto;
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .skin-option {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .skin-preview {
+            width: 100px;
+            height: 60px;
+            margin-right: 10px;
+            border: 2px solid white;
+            border-radius: 5px;
+        }
+        #game-over, #win-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        #game-over button, #win-screen button {
+            padding: 10px 20px;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #settings-menu label {
+            font-size: 18px;
+            margin: 10px;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+        }
+        #settings-menu input[type="range"] {
+            width: 200px;
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+            border-radius: 5px;
+            border: none;
+        }
+        #game-container canvas {
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div id="leftButton" class="button">←</div>
+    <div id="rightButton" class="button">→</div>
+    <div id="jumpButton" class="button">↑</div>
+    <div id="menu">
+        <h1>Ананас: Прыжки</h1>
+        <button id="level1-btn">Уровень 1</button>
+        <button id="level2-btn">Уровень 2</button>
+        <button id="level3-btn">Уровень 3</button>
+        <button id="level4-btn">Уровень 4</button>
+        <button id="random-level-btn">Генератор уровней</button>
+        <button id="create-level-btn">Создать уровень</button>
+        <button id="skin-menu-btn">Выбор скина</button>
+        <button id="settings-btn">Настройки</button>
+    </div>
+    <div id="settings-menu">
+        <h1>Настройки</h1>
+        <label for="music-volume">Громкость музыки:</label>
+        <input type="range" id="music-volume" min="0" max="1" step="0.1" value="0.5">
+        <label for="sfx-volume">Громкость звуков:</label>
+        <input type="range" id="sfx-volume" min="0" max="1" step="0.1" value="0.5">
+        <button id="about-btn">Об игре</button>
+        <button id="settings-back-btn">Назад</button>
+    </div>
+    <div id="about-menu">
+        <h1>Об игре</h1>
+        <p>Авторы игры:</p>
+        <p>Ананас и нейросеть Grok 3</p>
+        <button id="about-back-btn">Назад</button>
+    </div>
+    <div id="skin-menu">
+        <h1>Выбор скина</h1>
+        <div class="skin-option">
+            <img src="https://i.postimg.cc/jdc3cccf/20250321-114920.png" alt="Скин 1" class="skin-preview">
+            <button id="skin1-btn">Скин 1</button>
+        </div>
+        <div class="skin-option">
+            <img src="https://i.postimg.cc/QNkWjt7y/Clipped-image-20250305-181458.png" alt="Скин 2" class="skin-preview">
+            <button id="skin2-btn">Скин 2</button>
+        </div>
+        <div class="skin-option">
+            <img src="https://i.postimg.cc/3JFjf19W/Clipped-image-20250321-121502.png" alt="Скин 3" class="skin-preview">
+            <button id="skin3-btn">Скин 3</button>
+        </div>
+        <div class="skin-option">
+            <img src="https://i.postimg.cc/WpM0t8BS/Clipped-image-20250323-113913.png" alt="Скин 4" class="skin-preview">
+            <button id="skin4-btn">Скин 4</button>
+        </div>
+        <button id="skin-back-btn">Назад</button>
+    </div>
+    <div id="game-over">
+        <h1>Game Over</h1>
+        <button id="restart-btn">Начать заново</button>
+    </div>
+    <div id="win-screen">
+        <h1>You Win!</h1>
+        <p id="time-display"></p>
+        <p id="coins-display"></p>
+        <button id="return-to-menu-btn">Вернуться в меню</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            parent: 'game-container',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            render: {
+                willReadFrequently: true
+            }
+        };
+
+        let gameStarted = false;
+        let jumpCount = 0;
+        const maxJumps = 2;
+        let isJumping = false;
+        let startTime;
+        let elapsedTime;
+        let collectedCoins = 0;
+        let currentLevel = 1;
+        let isRandomLevel = false;
+        let backgroundMusic;
+        let menuMusic;
+        let settingsMusic;
+        let aboutMusic;
+        let skinMenuMusic;
+        let buttonClickSound;
+        let gameOverSound;
+        let winSound;
+        let jumpSound;
+        let coinSound;
+        let musicVolume = 0.5;
+        let sfxVolume = 0.5;
+        let selectedSkin = 'pineapple1';
+
+        let isTouchingLeft = false;
+        let isTouchingRight = false;
+        let isTouchingJump = false;
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            this.load.image('pineapple1', 'https://i.postimg.cc/jdc3cccf/20250321-114920.png');
+            this.load.image('pineapple2', 'https://i.postimg.cc/QNkWjt7y/Clipped-image-20250305-181458.png');
+            this.load.image('pineapple3', 'https://i.postimg.cc/3JFjf19W/Clipped-image-20250321-121502.png');
+            this.load.image('pineapple4', 'https://i.postimg.cc/WpM0t8BS/Clipped-image-20250323-113913.png');
+            this.load.image('background1', 'https://i.postimg.cc/C16Gt6tN/130-20250322154451.png');
+            this.load.image('background2', 'https://i.postimg.cc/BbHLqqNm/130-20250322155052.png');
+            this.load.image('background3', 'https://i.postimg.cc/8z1JSgvb/130-20250322155201.png');
+            this.load.image('background4', 'https://i.postimg.cc/zG0LD2SY/130-20250322155359.png');
+            this.load.image('platform', 'https://i.postimg.cc/rwnrR3gC/ce80c5c3db6e9b7.png');
+            this.load.image('deadlyPlatform1', 'https://i.postimg.cc/kG31cMCk/20250323-141207.png');
+            this.load.image('deadlyPlatform2', 'https://i.postimg.cc/VsnHNtB1/20250323-141244.png');
+            this.load.image('spike', 'https://i.postimg.cc/QMgZyGPc/2daea9f37ca2c48.png');
+            this.load.image('finish', 'https://i.postimg.cc/YSLhG9vM/542c5a903add587.png');
+            this.load.image('coin', 'https://i.postimg.cc/MTqJVR0C/132-20250323121142.png');
+            this.load.audio('buttonClick', 'https://ahahachahahahahahaah.github.io/game/button.mp3');
+            this.load.audio('gameOver', 'https://ahahachahahahahahaah.github.io/game/game_over.mp3');
+            this.load.audio('win', 'https://ahahachahahahahahaah.github.io/game/win.mp3');
+            this.load.audio('menuMusic', 'https://ahahachahahahahahaah.github.io/game/menu.mp3');
+            this.load.audio('levelMusic', 'https://ahahachahahahahahaah.github.io/game/level.mp3');
+            this.load.audio('settingsMusic', 'https://ahahachahahahahahaah.github.io/game/settings.mp3');
+            this.load.audio('aboutMusic', 'https://ahahachahahahahahaah.github.io/game/about.mp3');
+            this.load.audio('skinMenuMusic', 'https://ahahachahahahahahaah.github.io/game/about.mp3');
+            this.load.audio('jumpSound', 'https://ahahachahahahahahaah.github.io/game/jump.mp3');
+            this.load.audio('coinSound', 'https://ahahachahahahahahaah.github.io/game/coin.mp3');
+
+            this.load.on('filecomplete', (key) => {
+                console.log(`Файл загружен: ${key}`);
+            });
+            this.load.on('loaderror', (file) => {
+                console.error(`Ошибка загрузки файла: ${file.key}`);
+            });
+        }
+
+        function checkCoinOverlap(player, coins) {
+            const playerBounds = player.getBounds();
+            coins.getChildren().forEach(coin => {
+                if (!coin.active) return;
+                const coinBounds = coin.getBounds();
+                if (Phaser.Geom.Intersects.RectangleToRectangle(playerBounds, coinBounds)) {
+                    coin.setActive(false).setVisible(false);
+                    collectedCoins++;
+                    if (coinSound) coinSound.play();
+                    console.log(`Монета собрана! Всего монет: ${collectedCoins}`);
+                }
+            });
+        }
+
+        function create() {
+            if (!gameStarted) {
+                if (!menuMusic) {
+                    menuMusic = this.sound.add('menuMusic', { loop: true, volume: musicVolume });
+                    console.log("menuMusic инициализирован");
+                }
+                if (!menuMusic.isPlaying) {
+                    menuMusic.play();
+                    console.log("menuMusic воспроизводится");
+                }
+                return;
+            }
+
+            collectedCoins = 0;
+            this.physics.world.setBounds(0, 0, 3000, 600);
+
+            let backgroundKey;
+            if (isRandomLevel) {
+                const randomBackground = Phaser.Math.Between(1, 4);
+                backgroundKey = `background${randomBackground}`;
+            } else {
+                backgroundKey = `background${currentLevel}`;
+            }
+            let background = this.add.image(0, 0, backgroundKey).setOrigin(0, 0);
+            background.displayWidth = 3000;
+            background.displayHeight = 600;
+            background.setDepth(0);
+
+            this.platforms = this.physics.add.staticGroup();
+            this.deadlyPlatforms1 = this.physics.add.staticGroup();
+            this.deadlyPlatforms2 = this.physics.add.staticGroup();
+            this.spikes = this.physics.add.staticGroup();
+            this.coins = this.add.group();
+            this.finish = null;
+            this.player = null;
+
+            let deadlyPlatformType = null;
+            if (isRandomLevel) {
+                deadlyPlatformType = Phaser.Math.Between(0, 1) === 0 ? 'deadlyPlatform1' : 'deadlyPlatform2';
+            }
+
+            if (isRandomLevel) {
+                const platformPositions = [];
+                for (let x = 0; x < 3000; x += 300) {
+                    platformPositions.push({ x: x + 150, width: 300 });
+                }
+                platformPositions.forEach(pos => {
+                    const isUnderPlayer = pos.x >= 300 && pos.x <= 500;
+                    if (!isUnderPlayer) {
+                        const shouldBeDeadly = Phaser.Math.Between(0, 100) < 30;
+                        if (shouldBeDeadly && deadlyPlatformType) {
+                            if (deadlyPlatformType === 'deadlyPlatform1') {
+                                this.deadlyPlatforms1.create(pos.x, 550, 'deadlyPlatform1').setScale(0.5).refreshBody().setDepth(2);
+                            } else {
+                                this.deadlyPlatforms2.create(pos.x, 550, 'deadlyPlatform2').setScale(0.5).refreshBody().setDepth(2);
+                            }
+                        } else {
+                            this.platforms.create(pos.x, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                        }
+                    } else {
+                        this.platforms.create(pos.x, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                    }
+                });
+            } else {
+                if (currentLevel === 1) {
+                    const positions = [150, 300, 450, 750, 900, 1050, 1350, 1650, 1950, 2250, 2550, 2850];
+                    const deadlyPositions = [1050, 1650, 2250, 2550];
+                    positions.forEach(x => {
+                        if (deadlyPositions.includes(x)) {
+                            this.deadlyPlatforms1.create(x, 550, 'deadlyPlatform1').setScale(0.5).refreshBody().setDepth(2);
+                        } else {
+                            this.platforms.create(x, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                        }
+                    });
+                } else if (currentLevel === 2) {
+                    const positions = [150, 450, 600, 750, 1050, 1200, 1350, 1650, 1950, 2250, 2550, 2850];
+                    const deadlyPositions = [750, 1350, 1650, 2550];
+                    positions.forEach(x => {
+                        if (deadlyPositions.includes(x)) {
+                            this.deadlyPlatforms1.create(x, 550, 'deadlyPlatform1').setScale(0.5).refreshBody().setDepth(2);
+                        } else {
+                            this.platforms.create(x, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                        }
+                    });
+                } else if (currentLevel === 3) {
+                    const positions = [150, 300, 450, 750, 900, 1050, 1350, 1500, 1650, 1950, 2250, 2550, 2850];
+                    const deadlyPositions = [150, 1050, 1650, 2550];
+                    positions.forEach(x => {
+                        if (deadlyPositions.includes(x)) {
+                            this.deadlyPlatforms2.create(x, 550, 'deadlyPlatform2').setScale(0.5).refreshBody().setDepth(2);
+                        } else {
+                            this.platforms.create(x, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                        }
+                    });
+                } else if (currentLevel === 4) {
+                    const positions = [150, 450, 600, 750, 1050, 1200, 1350, 1650, 1950, 2100, 2250, 2550, 2850];
+                    const deadlyPositions = [150, 1350, 1950, 2250];
+                    positions.forEach(x => {
+                        if (deadlyPositions.includes(x)) {
+                            this.deadlyPlatforms2.create(x, 550, 'deadlyPlatform2').setScale(0.5).refreshBody().setDepth(2);
+                        } else {
+                            this.platforms.create(x, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                        }
+                    });
+                }
+            }
+
+            if (isRandomLevel) {
+                for (let i = 0; i < 8; i++) {
+                    const x = Phaser.Math.Between(400, 2600);
+                    const y = Phaser.Math.Between(200, 450);
+                    this.platforms.create(x, y, 'platform').setScale(0.3).refreshBody().setDepth(2);
+                }
+            } else {
+                if (currentLevel === 1) {
+                    const upperPositions = [
+                        { x: 600, y: 400 }, { x: 50, y: 250 }, { x: 1200, y: 300 },
+                        { x: 1800, y: 400 }, { x: 2400, y: 350 }
+                    ];
+                    upperPositions.forEach(pos => {
+                        this.platforms.create(pos.x, pos.y, 'platform').setScale(0.3).refreshBody().setDepth(2);
+                    });
+                } else if (currentLevel === 2) {
+                    const upperPositions = [
+                        { x: 400, y: 350 }, { x: 800, y: 250 }, { x: 1400, y: 400 },
+                        { x: 2000, y: 300 }, { x: 2600, y: 450 }
+                    ];
+                    upperPositions.forEach(pos => {
+                        this.platforms.create(pos.x, pos.y, 'platform').setScale(0.3).refreshBody().setDepth(2);
+                    });
+                } else if (currentLevel === 3) {
+                    const upperPositions = [
+                        { x: 400, y: 450 }, { x: 700, y: 350 }, { x: 1000, y: 250 },
+                        { x: 1300, y: 400 }, { x: 1600, y: 300 }, { x: 1900, y: 450 },
+                        { x: 2200, y: 350 }, { x: 2500, y: 250 }
+                    ];
+                    upperPositions.forEach(pos => {
+                        this.platforms.create(pos.x, pos.y, 'platform').setScale(0.3).refreshBody().setDepth(2);
+                    });
+                } else if (currentLevel === 4) {
+                    const upperPositions = [
+                        { x: 500, y: 450 }, { x: 900, y: 350 }, { x: 1300, y: 250 },
+                        { x: 1700, y: 400 }, { x: 2500, y: 300 }
+                    ];
+                    upperPositions.forEach(pos => {
+                        this.platforms.create(pos.x, pos.y, 'platform').setScale(0.3).refreshBody().setDepth(2);
+                    });
+                }
+            }
+
+            let spikePositions = [];
+            if (isRandomLevel) {
+                for (let i = 0; i < 5; i++) {
+                    const x = Phaser.Math.Between(600, 2600);
+                    this.spikes.create(x, 500, 'spike').setScale(0.2).refreshBody().setDepth(2);
+                    spikePositions.push(x);
+                }
+            } else {
+                if (currentLevel === 1) {
+                    spikePositions = [800, 1000, 1500, 2000];
+                    spikePositions.forEach(x => this.spikes.create(x, 500, 'spike').setScale(0.2).refreshBody().setDepth(2));
+                } else if (currentLevel === 2) {
+                    spikePositions = [600, 1200, 1800, 2400];
+                    spikePositions.forEach(x => this.spikes.create(x, 500, 'spike').setScale(0.2).refreshBody().setDepth(2));
+                } else if (currentLevel === 3) {
+                    spikePositions = [600, 900, 1200, 1800];
+                    spikePositions.forEach(x => this.spikes.create(x, 500, 'spike').setScale(0.2).refreshBody().setDepth(2));
+                } else if (currentLevel === 4) {
+                    spikePositions = [700, 1100, 1600, 2600];
+                    spikePositions.forEach(x => this.spikes.create(x, 500, 'spike').setScale(0.2).refreshBody().setDepth(2));
+                }
+            }
+
+            this.deadlyPlatforms1.getChildren().forEach(platform => {
+                const platformX = platform.x;
+                const platformY = platform.y;
+                if (platformY === 550 && spikePositions.some(spikeX => Math.abs(spikeX - platformX) < 50)) {
+                    platform.destroy();
+                    this.platforms.create(platformX, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                }
+            });
+            this.deadlyPlatforms2.getChildren().forEach(platform => {
+                const platformX = platform.x;
+                const platformY = platform.y;
+                if (platformY === 550 && spikePositions.some(spikeX => Math.abs(spikeX - platformX) < 50)) {
+                    platform.destroy();
+                    this.platforms.create(platformX, 550, 'platform').setScale(0.5).refreshBody().setDepth(2);
+                }
+            });
+
+            if (isRandomLevel) {
+                for (let i = 0; i < 5; i++) {
+                    const x = Phaser.Math.Between(400, 2600);
+                    const y = Phaser.Math.Between(200, 450);
+                    this.coins.create(x, y, 'coin').setScale(0.1).setDepth(2);
+                }
+            } else {
+                if (currentLevel === 1) {
+                    this.coins.create(600, 350, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(1200, 250, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(1800, 350, 'coin').setScale(0.1).setDepth(2);
+                } else if (currentLevel === 2) {
+                    this.coins.create(400, 300, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(800, 200, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(2000, 250, 'coin').setScale(0.1).setDepth(2);
+                } else if (currentLevel === 3) {
+                    this.coins.create(700, 300, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(1300, 350, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(2500, 200, 'coin').setScale(0.1).setDepth(2);
+                } else if (currentLevel === 4) {
+                    this.coins.create(900, 300, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(1300, 200, 'coin').setScale(0.1).setDepth(2);
+                    this.coins.create(1700, 350, 'coin').setScale(0.1).setDepth(2);
+                }
+            }
+
+            this.finish = this.physics.add.staticSprite(2800, 450, 'finish').setScale(0.2).refreshBody().setDepth(2);
+
+            this.player = this.physics.add.sprite(400, 450, selectedSkin);
+            this.player.setScale(0.1);
+            this.player.setBounce(0.2);
+            this.player.setCollideWorldBounds(true);
+            this.player.body.setSize(this.player.width * 0.8, this.player.height * 0.8);
+            this.player.setDepth(3);
+
+            this.cameras.main.setBounds(0, 0, 3000, 600);
+            this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+
+            this.physics.add.collider(this.player, this.platforms, () => {
+                jumpCount = 0;
+                console.log("Коснулся платформы, jumpCount сброшен:", jumpCount);
+            });
+            this.physics.add.overlap(this.player, this.spikes, gameOver, null, this);
+            this.physics.add.overlap(this.player, this.deadlyPlatforms1, gameOver, null, this);
+            this.physics.add.overlap(this.player, this.deadlyPlatforms2, gameOver, null, this);
+            this.physics.add.overlap(this.player, this.finish, winLevel, null, this);
+
+            jumpCount = 0;
+            startTime = this.time.now;
+
+            buttonClickSound = this.sound.add('buttonClick', { volume: sfxVolume });
+            gameOverSound = this.sound.add('gameOver', { volume: sfxVolume });
+            winSound = this.sound.add('win', { volume: sfxVolume });
+            jumpSound = this.sound.add('jumpSound', { volume: sfxVolume });
+            coinSound = this.sound.add('coinSound', { volume: sfxVolume });
+
+            if (menuMusic && menuMusic.isPlaying) menuMusic.stop();
+            if (settingsMusic && settingsMusic.isPlaying) settingsMusic.stop();
+            if (aboutMusic && aboutMusic.isPlaying) aboutMusic.stop();
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+
+            if (!backgroundMusic) {
+                backgroundMusic = this.sound.add('levelMusic', { loop: true, volume: musicVolume });
+            }
+            if (!backgroundMusic.isPlaying) {
+                backgroundMusic.play();
+            }
+
+            setupTouchControls(this);
+        }
+
+        function update() {
+            if (!gameStarted) return;
+
+            const cursors = this.input.keyboard.createCursorKeys();
+
+            if (cursors.left.isDown || isTouchingLeft) {
+                this.player.setVelocityX(-160);
+            } else if (cursors.right.isDown || isTouchingRight) {
+                this.player.setVelocityX(160);
+            } else {
+                this.player.setVelocityX(0);
+            }
+
+            if ((cursors.up.isDown || isTouchingJump) && !isJumping && jumpCount < maxJumps) {
+                this.player.setVelocityY(-330);
+                jumpCount++;
+                isJumping = true;
+                if (jumpSound) jumpSound.play();
+                console.log("Прыжок! jumpCount:", jumpCount);
+            }
+
+            if (!cursors.up.isDown && !isTouchingJump) {
+                isJumping = false;
+            }
+
+            checkCoinOverlap(this.player, this.coins);
+        }
+
+        function gameOver(player, hazard) {
+            this.physics.pause();
+            gameStarted = false;
+            if (backgroundMusic && backgroundMusic.isPlaying) backgroundMusic.stop();
+            if (gameOverSound) gameOverSound.play();
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        function winLevel(player, finish) {
+            this.physics.pause();
+            gameStarted = false;
+            if (backgroundMusic && backgroundMusic.isPlaying) backgroundMusic.stop();
+            if (winSound) winSound.play();
+            elapsedTime = (this.time.now - startTime) / 1000;
+            document.getElementById('time-display').innerText = `Время: ${elapsedTime.toFixed(2)} сек`;
+            document.getElementById('coins-display').innerText = `Собрано монет: ${collectedCoins}`;
+            document.getElementById('win-screen').style.display = 'flex';
+        }
+
+        function setupTouchControls(scene) {
+            const leftButton = document.getElementById('leftButton');
+            const rightButton = document.getElementById('rightButton');
+            const jumpButton = document.getElementById('jumpButton');
+
+            leftButton.addEventListener('touchstart', () => {
+                isTouchingLeft = true;
+            });
+            leftButton.addEventListener('touchend', () => {
+                isTouchingLeft = false;
+            });
+
+            rightButton.addEventListener('touchstart', () => {
+                isTouchingRight = true;
+            });
+            rightButton.addEventListener('touchend', () => {
+                isTouchingRight = false;
+            });
+
+            jumpButton.addEventListener('touchstart', () => {
+                isTouchingJump = true;
+            });
+            jumpButton.addEventListener('touchend', () => {
+                isTouchingJump = false;
+            });
+        }
+
+        function startLevel(level) {
+            if (buttonClickSound) buttonClickSound.play();
+            currentLevel = level;
+            isRandomLevel = false;
+            gameStarted = true;
+            document.getElementById('menu').style.display = 'none';
+            game.scene.scenes[0].scene.restart();
+            if (menuMusic && menuMusic.isPlaying) menuMusic.stop();
+            if (settingsMusic && settingsMusic.isPlaying) settingsMusic.stop();
+            if (aboutMusic && aboutMusic.isPlaying) aboutMusic.stop();
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+            if (!backgroundMusic) {
+                backgroundMusic = game.sound.add('levelMusic', { loop: true, volume: musicVolume });
+            }
+            if (!backgroundMusic.isPlaying) {
+                backgroundMusic.play();
+            }
+        }
+
+        function startRandomLevel() {
+            if (buttonClickSound) buttonClickSound.play();
+            isRandomLevel = true;
+            gameStarted = true;
+            document.getElementById('menu').style.display = 'none';
+            game.scene.scenes[0].scene.restart();
+            if (menuMusic && menuMusic.isPlaying) menuMusic.stop();
+            if (settingsMusic && settingsMusic.isPlaying) settingsMusic.stop();
+            if (aboutMusic && aboutMusic.isPlaying) aboutMusic.stop();
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+            if (!backgroundMusic) {
+                backgroundMusic = game.sound.add('levelMusic', { loop: true, volume: musicVolume });
+            }
+            if (!backgroundMusic.isPlaying) {
+                backgroundMusic.play();
+            }
+        }
+
+        function openSkinMenu() {
+            if (buttonClickSound) buttonClickSound.play();
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('skin-menu').style.display = 'flex';
+            if (menuMusic && menuMusic.isPlaying) menuMusic.stop();
+            if (settingsMusic && settingsMusic.isPlaying) settingsMusic.stop();
+            if (aboutMusic && aboutMusic.isPlaying) aboutMusic.stop();
+            if (!skinMenuMusic) {
+                skinMenuMusic = game.sound.add('skinMenuMusic', { loop: true, volume: musicVolume });
+            }
+            if (!skinMenuMusic.isPlaying) {
+                skinMenuMusic.play();
+            }
+        }
+
+        function selectSkin(skin) {
+            if (buttonClickSound) buttonClickSound.play();
+            selectedSkin = skin;
+            console.log(`Выбран скин: ${skin}`);
+            document.getElementById('skin-menu').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+            if (!menuMusic) {
+                menuMusic = game.sound.add('menuMusic', { loop: true, volume: musicVolume });
+            }
+            if (!menuMusic.isPlaying) {
+                menuMusic.play();
+            }
+        }
+
+        function openSettings() {
+            if (buttonClickSound) buttonClickSound.play();
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('settings-menu').style.display = 'flex';
+            if (menuMusic && menuMusic.isPlaying) menuMusic.stop();
+            if (aboutMusic && aboutMusic.isPlaying) aboutMusic.stop();
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+            if (!settingsMusic) {
+                settingsMusic = game.sound.add('settingsMusic', { loop: true, volume: musicVolume });
+            }
+            if (!settingsMusic.isPlaying) {
+                settingsMusic.play();
+            }
+        }
+
+        function openAbout() {
+            if (buttonClickSound) buttonClickSound.play();
+            document.getElementById('settings-menu').style.display = 'none';
+            document.getElementById('about-menu').style.display = 'flex';
+            if (settingsMusic && settingsMusic.isPlaying) settingsMusic.stop();
+            if (menuMusic && menuMusic.isPlaying) menuMusic.stop();
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+            if (!aboutMusic) {
+                aboutMusic = game.sound.add('aboutMusic', { loop: true, volume: musicVolume });
+            }
+            if (!aboutMusic.isPlaying) {
+                aboutMusic.play();
+            }
+        }
+
+        function backToMenu() {
+            if (buttonClickSound) buttonClickSound.play();
+            document.getElementById('settings-menu').style.display = 'none';
+            document.getElementById('about-menu').style.display = 'none';
+            document.getElementById('skin-menu').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            gameStarted = false;
+            game.scene.scenes[0].scene.restart();
+            if (settingsMusic && settingsMusic.isPlaying) settingsMusic.stop();
+            if (aboutMusic && aboutMusic.isPlaying) aboutMusic.stop();
+            if (skinMenuMusic && skinMenuMusic.isPlaying) skinMenuMusic.stop();
+            if (backgroundMusic && backgroundMusic.isPlaying) backgroundMusic.stop();
+            if (!menuMusic) {
+                menuMusic = game.sound.add('menuMusic', { loop: true, volume: musicVolume });
+            }
+            if (!menuMusic.isPlaying) {
+                menuMusic.play();
+            }
+        }
+
+        function restartLevel() {
+            if (buttonClickSound) buttonClickSound.play();
+            document.getElementById('game-over').style.display = 'none';
+            gameStarted = true;
+            game.scene.scenes[0].scene.restart();
+            if (!backgroundMusic) {
+                backgroundMusic = game.sound.add('levelMusic', { loop: true, volume: musicVolume });
+            }
+            if (!backgroundMusic.isPlaying) {
+                backgroundMusic.play();
+            }
+        }
+
+        function returnToMenu() {
+            if (buttonClickSound) buttonClickSound.play();
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('win-screen').style.display = 'none';
+            document.getElementById('menu').style.display = 'flex';
+            gameStarted = false;
+            game.scene.scenes[0].scene.restart();
+            if (backgroundMusic && backgroundMusic.isPlaying) backgroundMusic.stop();
+            if (!menuMusic) {
+                menuMusic = game.sound.add('menuMusic', { loop: true, volume: musicVolume });
+            }
+            if (!menuMusic.isPlaying) {
+                menuMusic.play();
+            }
+        }
+
+        function adjustMusicVolume(value) {
+            musicVolume = parseFloat(value);
+            if (menuMusic) menuMusic.setVolume(musicVolume);
+            if (backgroundMusic) backgroundMusic.setVolume(musicVolume);
+            if (settingsMusic) settingsMusic.setVolume(musicVolume);
+            if (aboutMusic) aboutMusic.setVolume(musicVolume);
+            if (skinMenuMusic) skinMenuMusic.setVolume(musicVolume);
+            console.log(`Громкость музыки установлена: ${musicVolume}`);
+        }
+
+        function adjustSFXVolume(value) {
+            sfxVolume = parseFloat(value);
+            if (buttonClickSound) buttonClickSound.setVolume(sfxVolume);
+            if (gameOverSound) gameOverSound.setVolume(sfxVolume);
+            if (winSound) winSound.setVolume(sfxVolume);
+            if (jumpSound) jumpSound.setVolume(sfxVolume);
+            if (coinSound) coinSound.setVolume(sfxVolume);
+            console.log(`Громкость звуков установлена: ${sfxVolume}`);
+        }
+
+        // Обработчики событий для кнопок главного меню
+        document.getElementById('level1-btn').addEventListener('click', () => startLevel(1));
+        document.getElementById('level2-btn').addEventListener('click', () => startLevel(2));
+        document.getElementById('level3-btn').addEventListener('click', () => startLevel(3));
+        document.getElementById('level4-btn').addEventListener('click', () => startLevel(4));
+        document.getElementById('random-level-btn').addEventListener('click', startRandomLevel);
+        document.getElementById('create-level-btn').addEventListener('click', () => {
+            if (buttonClickSound) buttonClickSound.play();
+            window.location.href = 'https://ahahachahahahahahaah.github.io/game/editor.html';
+        });
+        document.getElementById('skin-menu-btn').addEventListener('click', openSkinMenu);
+        document.getElementById('settings-btn').addEventListener('click', openSettings);
+
+        // Обработчики для меню настроек
+        document.getElementById('about-btn').addEventListener('click', openAbout);
+        document.getElementById('settings-back-btn').addEventListener('click', backToMenu);
+        document.getElementById('music-volume').addEventListener('input', (e) => adjustMusicVolume(e.target.value));
+        document.getElementById('sfx-volume').addEventListener('input', (e) => adjustSFXVolume(e.target.value));
+
+        // Обработчики для меню "Об игре"
+        document.getElementById('about-back-btn').addEventListener('click', backToMenu);
+
+        // Обработчики для меню выбора скина
+        document.getElementById('skin1-btn').addEventListener('click', () => selectSkin('pineapple1'));
+        document.getElementById('skin2-btn').addEventListener('click', () => selectSkin('pineapple2'));
+        document.getElementById('skin3-btn').addEventListener('click', () => selectSkin('pineapple3'));
+        document.getElementById('skin4-btn').addEventListener('click', () => selectSkin('pineapple4'));
+        document.getElementById('skin-back-btn').addEventListener('click', backToMenu);
+
+        // Обработчики для экранов окончания игры
+        document.getElementById('restart-btn').addEventListener('click', restartLevel);
+        document.getElementById('return-to-menu-btn').addEventListener('click', returnToMenu);
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'925d80ee2bfd6763',t:'MTc0Mjg5NjIyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
