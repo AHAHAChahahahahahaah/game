@@ -1,0 +1,413 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html>
+<head>
+    <title>3D Блочная Игра с Голубым Небом</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; overflow: hidden; touch-action: none; font-family: Arial; }
+        canvas { display: block; }
+        
+        #mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        
+        .movement-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
+            margin-left: 20px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-right: 20px;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: all;
+            touch-action: manipulation;
+        }
+        
+        #forward { grid-column: 2; grid-row: 1; }
+        #left { grid-column: 1; grid-row: 2; }
+        #down { grid-column: 2; grid-row: 2; background: rgba(0, 0, 255, 0.5); }
+        #back { grid-column: 2; grid-row: 3; }
+        #right { grid-column: 3; grid-row: 2; }
+        #up { grid-column: 1; grid-row: 1; background: rgba(0, 255, 0, 0.5); }
+        
+        #break {
+            background: rgba(255, 0, 0, 0.5);
+        }
+        
+        #place {
+            background: rgba(0, 255, 0, 0.5);
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        
+        #crosshair::before, #crosshair::after {
+            content: "";
+            position: absolute;
+            background: white;
+        }
+        
+        #crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+        
+        #crosshair::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
+    </style>
+</head>
+<body>
+    <div id="crosshair"></div>
+    
+    <div id="mobile-controls">
+        <div class="movement-buttons">
+            <button id="up" class="control-btn">↑</button>
+            <button id="forward" class="control-btn">▲</button>
+            <button id="left" class="control-btn">◄</button>
+            <button id="down" class="control-btn">↓</button>
+            <button id="back" class="control-btn">▼</button>
+            <button id="right" class="control-btn">►</button>
+        </div>
+        
+        <div class="action-buttons">
+            <button id="break" class="control-btn">✖</button>
+            <button id="place" class="control-btn">✔</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Инициализация
+        const scene = new THREE.Scene();
+        
+        // Голубое небо
+        scene.background = new THREE.Color(0x87CEEB);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.domElement.style.touchAction = 'none';
+        document.body.appendChild(renderer.domElement);
+
+        // Освещение
+        const light = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(light);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        directionalLight.position.set(1, 1, 0.5).normalize();
+        scene.add(directionalLight);
+
+        // Игрок (режим полёта)
+        const player = {
+            position: new THREE.Vector3(0, 2, 5), // Стартовая позиция ближе к земле
+            velocity: new THREE.Vector3(),
+            moveSpeed: 0.2,
+            flySpeed: 0.15,
+            cameraOffset: new THREE.Vector3(0, 0, 0)
+        };
+        
+        camera.position.copy(player.position).add(player.cameraOffset);
+        let pitch = 0;
+        let yaw = 0;
+
+        // Управление (ПК)
+        const keys = { 
+            w: false, a: false, s: false, d: false, 
+            space: false, shift: false,
+            arrowup: false, arrowdown: false 
+        };
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ') keys.space = true;
+            else if (e.key === 'Shift') keys.shift = true;
+            else if (e.key === 'ArrowUp') keys.arrowup = true;
+            else if (e.key === 'ArrowDown') keys.arrowdown = true;
+            else keys[e.key.toLowerCase()] = true;
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.key === ' ') keys.space = false;
+            else if (e.key === 'Shift') keys.shift = false;
+            else if (e.key === 'ArrowUp') keys.arrowup = false;
+            else if (e.key === 'ArrowDown') keys.arrowdown = false;
+            else keys[e.key.toLowerCase()] = false;
+        });
+
+        // Управление (телефон)
+        const forwardBtn = document.getElementById('forward');
+        const backBtn = document.getElementById('back');
+        const leftBtn = document.getElementById('left');
+        const rightBtn = document.getElementById('right');
+        const upBtn = document.getElementById('up');
+        const downBtn = document.getElementById('down');
+        const breakBtn = document.getElementById('break');
+        const placeBtn = document.getElementById('place');
+        
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let moveUp = false;
+        let moveDown = false;
+        
+        forwardBtn.addEventListener('touchstart', () => moveForward = true);
+        forwardBtn.addEventListener('touchend', () => moveForward = false);
+        backBtn.addEventListener('touchstart', () => moveBackward = true);
+        backBtn.addEventListener('touchend', () => moveBackward = false);
+        leftBtn.addEventListener('touchstart', () => moveLeft = true);
+        leftBtn.addEventListener('touchend', () => moveLeft = false);
+        rightBtn.addEventListener('touchstart', () => moveRight = true);
+        rightBtn.addEventListener('touchend', () => moveRight = false);
+        upBtn.addEventListener('touchstart', () => moveUp = true);
+        upBtn.addEventListener('touchend', () => moveUp = false);
+        downBtn.addEventListener('touchstart', () => moveDown = true);
+        downBtn.addEventListener('touchend', () => moveDown = false);
+
+        // Управление камерой на телефоне
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isRotating = false;
+        
+        renderer.domElement.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                isRotating = true;
+            }
+        });
+        
+        renderer.domElement.addEventListener('touchmove', (e) => {
+            if (isRotating && e.touches.length === 1) {
+                const touchX = e.touches[0].clientX;
+                const touchY = e.touches[0].clientY;
+                
+                yaw -= (touchX - touchStartX) * 0.01;
+                pitch -= (touchY - touchStartY) * 0.01;
+                pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+                
+                touchStartX = touchX;
+                touchStartY = touchY;
+            }
+        });
+        
+        renderer.domElement.addEventListener('touchend', () => {
+            isRotating = false;
+        });
+
+        // Загрузка текстур 16x16
+        const textureLoader = new THREE.TextureLoader();
+        const grassTexture = textureLoader.load('https://i.postimg.cc/pLy4MMR9/140-20250417174551.png');
+        const stoneTexture = textureLoader.load('https://i.postimg.cc/k4CT403v/141-20250417174656.png');
+        
+        // Настройка текстур
+        grassTexture.magFilter = THREE.NearestFilter;
+        grassTexture.minFilter = THREE.NearestFilter;
+        stoneTexture.magFilter = THREE.NearestFilter;
+        stoneTexture.minFilter = THREE.NearestFilter;
+
+        // Блоки
+        const blockTypes = {
+            grass: { map: grassTexture },
+            stone: { map: stoneTexture }
+        };
+
+        // Мир
+        const world = {};
+        const blockSize = 1;
+
+        // Создаем мир с 5 слоями камня под травой
+        for (let x = -10; x < 10; x++) {
+            for (let z = -10; z < 10; z++) {
+                addBlock(x, 0, z, 'grass');
+                for (let y = -1; y >= -5; y--) {
+                    addBlock(x, y, z, 'stone');
+                }
+            }
+        }
+
+        function addBlock(x, y, z, type) {
+            const key = `${x},${y},${z}`;
+            if (world[key]) return;
+
+            const geometry = new THREE.BoxGeometry(blockSize, blockSize, blockSize);
+            const materials = Array(6).fill(new THREE.MeshStandardMaterial({ 
+                map: blockTypes[type].map 
+            }));
+            
+            const block = new THREE.Mesh(geometry, materials);
+            block.position.set(x, y, z);
+            scene.add(block);
+            world[key] = { mesh: block, type: type };
+        }
+
+        function removeBlock(x, y, z) {
+            const key = `${x},${y},${z}`;
+            if (world[key]) {
+                scene.remove(world[key].mesh);
+                delete world[key];
+            }
+        }
+
+        // Проверка коллизий
+        function checkCollision(x, y, z) {
+            const blockX = Math.floor(x + 0.5);
+            const blockY = Math.floor(y + 0.5);
+            const blockZ = Math.floor(z + 0.5);
+            return world[`${blockX},${blockY},${blockZ}`] !== undefined;
+        }
+
+        // Взаимодействие с блоками (только по кнопкам)
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2(0, 0);
+
+        function handleBlockAction(isBreak) {
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(Object.values(world).map(b => b.mesh));
+            
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                const hitPos = hit.object.position;
+                const normal = hit.face.normal;
+
+                if (isBreak) {
+                    removeBlock(hitPos.x, hitPos.y, hitPos.z);
+                } else {
+                    const newX = Math.round(hitPos.x + normal.x);
+                    const newY = Math.round(hitPos.y + normal.y);
+                    const newZ = Math.round(hitPos.z + normal.z);
+                    const blockType = newY === 0 ? 'grass' : 'stone';
+                    
+                    if (!world[`${newX},${newY},${newZ}`]) {
+                        addBlock(newX, newY, newZ, blockType);
+                    }
+                }
+            }
+        }
+
+        // Настройка событий только для кнопок
+        breakBtn.addEventListener('click', () => handleBlockAction(true));
+        placeBtn.addEventListener('click', () => handleBlockAction(false));
+        
+        // Запрещаем все другие способы взаимодействия
+        renderer.domElement.addEventListener('mousedown', (e) => e.preventDefault());
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Игровой цикл с режимом полёта
+        function update() {
+            // Направление взгляда
+            const direction = new THREE.Vector3();
+            camera.getWorldDirection(direction);
+            direction.y = 0;
+            direction.normalize();
+
+            const sideDir = new THREE.Vector3();
+            sideDir.crossVectors(camera.up, direction);
+            
+            // Движение вперед/назад
+            const moveZ = (keys.w || moveForward ? 1 : 0) + (keys.s || moveBackward ? -1 : 0);
+            player.velocity.x = direction.x * moveZ * player.moveSpeed;
+            player.velocity.z = direction.z * moveZ * player.moveSpeed;
+            
+            // Движение влево/вправо
+            const moveX = (keys.a || moveLeft ? 1 : 0) + (keys.d || moveRight ? -1 : 0);
+            player.velocity.x += sideDir.x * moveX * player.moveSpeed;
+            player.velocity.z += sideDir.z * moveX * player.moveSpeed;
+            
+            // Движение вверх/вниз
+            const moveY = (keys.space || keys.arrowup || moveUp ? 1 : 0) + 
+                         (keys.shift || keys.arrowdown || moveDown ? -1 : 0);
+            player.velocity.y = moveY * player.flySpeed;
+            
+            // Применяем движение с проверкой коллизий
+            const newPos = player.position.clone().add(player.velocity);
+            
+            if (!checkCollision(newPos.x, newPos.y, newPos.z)) {
+                player.position.copy(newPos);
+            } else {
+                // Попробуем двигаться по осям отдельно
+                if (!checkCollision(newPos.x, player.position.y, player.position.z)) {
+                    player.position.x = newPos.x;
+                }
+                if (!checkCollision(player.position.x, newPos.y, player.position.z)) {
+                    player.position.y = newPos.y;
+                }
+                if (!checkCollision(player.position.x, player.position.y, newPos.z)) {
+                    player.position.z = newPos.z;
+                }
+            }
+            
+            // Обновляем камеру
+            camera.position.copy(player.position);
+            camera.rotation.set(pitch, yaw, 0, 'YXZ');
+        }
+
+        // Управление мышью
+        let isMouseDown = false;
+        let mouseMoveX = 0;
+        let mouseMoveY = 0;
+        
+        renderer.domElement.addEventListener('mousedown', () => isMouseDown = true);
+        document.addEventListener('mouseup', () => isMouseDown = false);
+        document.addEventListener('mousemove', (e) => {
+            if (isMouseDown) {
+                mouseMoveX = e.movementX;
+                mouseMoveY = e.movementY;
+                
+                yaw -= mouseMoveX * 0.002;
+                pitch -= mouseMoveY * 0.002;
+                pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+            }
+        });
+
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
+            update();
+            renderer.render(scene, camera);
+        }
+
+        gameLoop();
+
+        // Ресайз
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
